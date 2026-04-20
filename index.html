@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeFinder - AI Powered Music Experience</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #FFB6C1;
+            --secondary: #FFDAB9;
+            --accent: #FF6347;
+            --dark-bg: #0a192f;
+            --glass: rgba(255, 245, 238, 0.15);
+            --glass-border: rgba(255, 182, 193, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+
+        body {
+            background: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(255, 182, 193, 0.25) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(255, 160, 122, 0.25) 0%, transparent 40%);
+            color: #e6f1ff;
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-glow { position: fixed; width: 300px; height: 300px; background: var(--primary); filter: blur(120px); z-index: -1; border-radius: 50%; opacity: 0.4; animation: move 10s infinite alternate; }
+        @keyframes move { from { transform: translate(-10%, -10%); } to { transform: translate(110vw, 110vh); } }
+
+        header {
+            background: rgba(10, 25, 47, 0.85);
+            backdrop-filter: blur(20px);
+            padding: 15px 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky; top: 0; z-index: 1000;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .logo { display: flex; align-items: center; gap: 15px; cursor: pointer; }
+        .logo-icon { font-size: 30px; background: linear-gradient(45deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo h1 { font-size: 26px; font-weight: 800; color: #e6f1ff; }
+
+        nav ul { display: flex; list-style: none; gap: 30px; align-items: center; }
+        nav a { color: #ccd6f6; text-decoration: none; font-size: 15px; transition: 0.3s; cursor: pointer; }
+        nav a:hover { color: var(--accent); }
+
+        .nav-btn { background: linear-gradient(90deg, var(--primary), var(--accent)); color: white; border: none; padding: 10px 25px; border-radius: 30px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .nav-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255, 182, 193, 0.5); }
+
+        .page { display: none; width: 100%; max-width: 1400px; margin: 0 auto; padding: 40px 20px; animation: fadeIn 0.8s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .panel { background: rgba(17, 34, 64, 0.7); backdrop-filter: blur(30px); padding: 35px; border-radius: 30px; border: 1px solid var(--glass-border); }
+
+        /* Dashboard & Detection Elements */
+        .dashboard-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; margin-top: 30px; }
+        @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        .detection-toggle { display: flex; background: rgba(255, 160, 122, 0.4); border-radius: 15px; margin-bottom: 25px; padding: 8px; }
+        .toggle-btn { flex: 1; padding: 12px; border: none; background: none; color: #ccd6f6; cursor: pointer; border-radius: 10px; font-weight: 600; }
+        .toggle-btn.active { background: var(--primary); color: white; }
+
+        video, #previewImage { width: 100%; border-radius: 20px; background: #112240; aspect-ratio: 16/9; object-fit: cover; margin-bottom: 20px; border: 2px solid var(--glass-border); }
+
+        /* Track List */
+        .track-item { display: flex; align-items: center; background: rgba(204, 214, 246, 0.05); padding: 15px; border-radius: 188px; margin-bottom: 12px; gap: 15px; transition: 0.3s; border-radius: 20px; }
+        .track-item:hover { background: rgba(204, 214, 246, 0.1); transform: translateX(5px); }
+        .track-item img { width: 55px; height: 55px; border-radius: 10px; }
+        .track-info { flex: 1; overflow: hidden; }
+        .track-info h4 { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e6f1ff; }
+        .track-info p { font-size: 12px; color: #8892b0; }
+        .play-btn { background: var(--primary); color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
+
+        /* Notification */
+        .notification { position: fixed; bottom: 30px; right: 30px; padding: 18px 30px; border-radius: 15px; z-index: 5000; color: #e6f1ff; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(139, 90, 90, 0.1); transition: 0.3s; }
+
+        /* User Menu */
+        .user-menu { position: relative; display: flex; align-items: center; gap: 10px; background: rgba(17, 34, 64, 0.7); padding: 5px 15px; border-radius: 25px; border: 1px solid var(--glass-border); cursor: pointer; color: #ccd6f6; }
+        .dropdown { position: absolute; top: 120%; right: 0; background: #112240; border: 1px solid var(--glass-border); border-radius: 15px; width: 180px; display: none; overflow: hidden; box-shadow: 0 10px 30px rgba(139, 90, 90, 0.1); }
+        .dropdown.show { display: block; }
+        .dropdown-item { padding: 12px 20px; font-size: 14px; color: #ccd6f6; transition: 0.3s; }
+        .dropdown-item:hover { background: var(--primary); color: white; }
+
+        /* Form styling */
+        .form-container { max-width: 500px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; color: var(--accent); font-size: 13px; }
+        .form-group input { width: 100%; padding: 12px; background: rgba(17, 34, 64, 0.5); border: 1px solid var(--glass-border); color: #e6f1ff; border-radius: 10px; outline: none; }
+        .form-group input:focus { border-color: var(--primary); }
+        .form-group input::placeholder { color: #8892b0; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 25, 47, 0.85); display: none; justify-content: center; align-items: center; z-index: 4000; backdrop-filter: blur(5px); }
+        .modal-content { background: #112240; padding: 40px; border-radius: 30px; border: 1px solid var(--glass-border); width: 100%; max-width: 420px; text-align: center; color: #e6f1ff; }
+
+        /* Learn More */
+        .learn-more-section { padding: 80px 20px; text-align: center; margin-top: 40px; border-radius: 40px; background: rgba(17, 34, 64, 0.3); }
+        .learn-more-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 40px; }
+        .feature-card { background: rgba(17, 34, 64, 0.7); padding: 40px; border-radius: 25px; border: 1px solid var(--glass-border); transition: 0.4s; }
+        .feature-card:hover { transform: translateY(-10px); background: rgba(255, 182, 193, 0.1); border-color: var(--accent); }
+        .feature-card i { font-size: 50px; color: var(--accent); margin-bottom: 25px; }
+
+        .auth-toggle { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; }
+        .auth-toggle-btn { color: #8892b0; cursor: pointer; font-weight: 600; font-size: 18px; border-bottom: 2px solid transparent; padding-bottom: 5px; transition: 0.3s; }
+        .auth-toggle-btn.active { color: #e6f1ff; border-bottom: 2px solid var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<header>
+    <div class="logo" onclick="showPage('home')">
+        <div class="logo-icon"><i class="fas fa-headphones-alt"></i></div>
+        <h1>VibeFinder</h1>
+    </div>
+    <nav>
+        <ul>
+            <li><a onclick="showPage('home')">Home</a></li>
+            <li><a onclick="checkAuthAndNavigate('dashboard')">Dashboard</a></li>
+            <li><a onclick="checkAuthAndNavigate('trending')">Trending</a></li>
+            <li id="authSection">
+                <button class="nav-btn" onclick="showPage('auth')">Login</button>
+            </li>
+        </ul>
+    </nav>
+</header>
+
+<main>
+    <!-- Home Page -->
+    <div id="homePage" class="page active">
+        <div style="text-align: center; padding: 60px 20px;">
+            <h1 style="font-size: 60px; line-height: 1.1; color: #e6f1ff;">Scan Your Mood → Play Your Vibe.</h1>
+            <p style="font-size: 20px; color: #8892b0; margin: 30px auto; max-width: 700px;">Experience the first AI music platform that reads your emotions to play what you feel.</p>
+            <div style="display: flex; justify-content: center; gap: 20px;">
+                <button class="nav-btn" style="padding: 15px 45px; font-size: 17px;" onclick="checkAuthAndNavigate('dashboard')">Launch Player</button>
+                <button class="nav-btn" style="padding: 15px 45px; background: transparent; border: 1px solid var(--glass-border); font-size: 17px; color: #e6f1ff;" onclick="scrollToLearnMore()">Why VibeFinder?</button>
+            </div>
+        </div>
+
+        <div id="learnMore" class="learn-more-section">
+            <h2 style="font-size: 40px; margin-bottom: 10px; color: #e6f1ff;">Music Meets Intelligence</h2>
+            <p style="color: #8892b0; font-size: 18px;">Our platform bridges the gap between facial micro-expressions and global melodies.</p>
+            <div class="learn-more-grid">
+                <div class="feature-card">
+                    <i class="fas fa-microchip"></i>
+                    <h4 style="color: #e6f1ff;">Custom H5 Model</h4>
+                    <p style="color: #8892b0; margin-top: 15px;">We exclusively use <b>emotion_model.h5</b>, trained on over 30,000 facial expressions for pinpoint accuracy.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-music"></i>
+                    <h4 style="color: #e6f1ff;">Global Vibe Focus</h4>
+                    <p style="color: #8892b0; margin-top: 15px;">Discover global pop curated from iTunes to match your vibes, no matter where you are.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-user-shield"></i>
+                    <h4 style="color: #e6f1ff;">Local Processing</h4>
+                    <p style="color: #8892b0; margin-top: 15px;">Zero server storage. Your face data is analyzed in real-time and discarded immediately.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Page (Login/Register) -->
+    <div id="authPage" class="page">
+        <div class="panel" style="max-width: 450px; margin: 0 auto;">
+            <div class="auth-toggle">
+                <span class="auth-toggle-btn active" id="loginTab" onclick="toggleAuthMode('login')">Login</span>
+                <span class="auth-toggle-btn" id="registerTab" onclick="toggleAuthMode('register')">Register</span>
+            </div>
+
+            <!-- Login Form -->
+            <div id="loginForm">
+                <div class="form-group"><label>Username</label><input type="text" id="loginUser" placeholder="Enter username"></div>
+                <div class="form-group"><label>Password</label><input type="password" id="loginPass" placeholder="Enter password"></div>
+                <button class="nav-btn" style="width: 100%; margin-top: 10px;" onclick="handleLogin()">Sign In</button>
+                <p style="text-align: center; margin-top: 15px; color: #8892b0; font-size: 13px; cursor: pointer;" onclick="openForgotPass()">Forgot Password?</p>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" style="display: none;">
+                <div class="form-group"><label>Full Name</label><input type="text" id="regFullName" placeholder="e.g. John Doe"></div>
+                <div class="form-group"><label>Username</label><input type="text" id="regUser" placeholder="Unique username"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="john@example.com"></div>
+                <div class="form-group"><label>Mobile Number</label><input type="tel" id="regMobile" placeholder="+1 0000000000"></div>
+                <div class="form-group"><label>Password</label><input type="password" id="regPass" placeholder="Create password"></div>
+                <button class="nav-btn" style="width: 100%; margin-top: 10px;" onclick="handleRegisterRequest()">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Page -->
+    <div id="dashboardPage" class="page">
+        <div class="dashboard-grid">
+            <div class="panel">
+                <div class="detection-toggle">
+                    <button class="toggle-btn active" id="camBtn" onclick="setMode('cam')">Live Cam</button>
+                    <button class="toggle-btn" id="uploadBtn" onclick="setMode('upload')">Photo Upload</button>
+                </div>
+                
+                <div id="camView"><video id="videoElement" autoplay playsinline></video></div>
+                <div id="uploadView" style="display: none; text-align: center;">
+                    <img id="previewImage" src="https://via.placeholder.com/640x360/112240/8892b0?text=Click+to+Upload" alt="preview" onclick="document.getElementById('imageInput').click()" style="cursor: pointer;">
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+                </div>
+
+                <button class="nav-btn" style="width: 100%; padding: 20px; font-size: 18px;" id="detectBtn" onclick="runDetection()">
+                    <i class="fas fa-search"></i> Detect My Mood
+                </button>
+                <p id="status" style="text-align: center; margin-top: 15px; font-size: 13px; color: #FF6347;">System Ready | Model v1.0</p>
+            </div>
+
+            <div class="panel">
+                <h3 style="margin-bottom: 20px; color: #e6f1ff;"><i class="fas fa-list"></i> Global Curated List</h3>
+                <div id="moodResult" style="text-align: center; margin: 15px 0; font-size: 26px; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 2px;">---</div>
+                <div id="trackList" class="track-list">
+                    <p style="text-align: center; color: #8892b0; padding: 40px 0;">No tracks to display. Perform a scan.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Page -->
+    <div id="profilePage" class="page">
+        <div class="panel form-container">
+            <h2 style="margin-bottom: 30px; text-align: center; font-size: 32px; color: #e6f1ff;">Your Profile</h2>
+            <div class="form-group"><label>Full Name</label><input type="text" id="profFullName"></div>
+            <div class="form-group"><label>Username</label><input type="text" id="profUser" readonly style="opacity: 0.6;"></div>
+            <div class="form-group"><label>Email Address</label><input type="email" id="profEmail"></div>
+            <div class="form-group"><label>Mobile Number</label><input type="tel" id="profMobile"></div>
+            <div class="form-group"><label>Update Password</label><input type="password" id="profPass" placeholder="Enter new password"></div>
+            
+            <div id="profileOtpBox" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--glass-border);">
+                <div class="form-group"><label>Enter OTP (Sent to mobile)</label><input type="text" id="profOtpInput" placeholder="4 digits"></div>
+                <button class="nav-btn" style="width: 100%; background: #FFA07A;" onclick="verifyProfileUpdate()">Verify & Save</button>
+            </div>
+            
+            <button class="nav-btn" style="width: 100%; margin-top: 20px;" id="profileSaveBtn" onclick="requestProfileOtp()">Request Verification OTP</button>
+        </div>
+    </div>
+
+    <!-- Trending Page -->
+    <div id="trendingPage" class="page">
+        <h2 style="margin-bottom: 30px; font-size: 36px; text-align: center; color: #e6f1ff;">🔥 Global Trending Hits</h2>
+        <div id="trendingGrid" class="dashboard-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
+    </div>
+</main>
+
+<!-- Registration / Forgot Pass OTP Modal -->
+<div class="modal-overlay" id="otpModal">
+    <div class="modal-content">
+        <div id="otpModalIcon" style="font-size: 50px; color: var(--accent); margin-bottom: 20px;"><i class="fas fa-shield-alt"></i></div>
+        <h3 id="otpModalTitle" style="color: #e6f1ff;">Verify Registration</h3>
+        <p id="otpModalDesc" style="font-size: 14px; color: #8892b0; margin: 15px 0;">We've sent a 4-digit code to your mobile for identity verification.</p>
+        <div class="form-group"><input type="text" id="modalOtpInput" placeholder="Enter Code (e.g. 1234)" style="text-align: center; font-size: 24px; letter-spacing: 10px;"></div>
+        <button class="nav-btn" style="width: 100%;" id="otpConfirmBtn">Confirm OTP</button>
+        <button class="nav-btn" style="width: 100%; background: transparent; border: none; margin-top: 10px; color: #8892b0;" onclick="closeOtpModal()">Back</button>
+    </div>
+</div>
+
+<footer>
+    <div style="text-align: center; padding: 60px 40px; color: #8892b0; font-size: 13px; border-top: 1px solid var(--glass-border); margin-top: 100px; background: rgba(17, 34, 64, 0.3);">
+        <p>&copy; 2024 VibeFinder AI Systems. Global Music Playback. <br> Powered by Apple iTunes & Emotion Model h5.</p>
+    </div>
+</footer>
+
+<canvas id="canvas" style="display: none;"></canvas>
+
+<script>
+    let user = null;
+    let stream = null;
+    let mode = 'cam';
+    let uploadedBase64 = null;
+    let currentAudio = null;
+    let pendingRegData = null;
+    let authMode = 'login';
+    const API = 'http://localhost:5001';
+
+    // Core Logic
+    function showPage(id) {
+        const restricted = ['dashboard', 'trending', 'profile'];
+        if (restricted.includes(id) && !user) {
+            notify("Identity required. Please Login or Register first.", "info");
+            id = 'auth';
+        }
+
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById(id + 'Page');
+        if (target) target.classList.add('active');
+        
+        document.getElementById('profileDropdown')?.classList.remove('show');
+        
+        if (id === 'dashboard' && mode === 'cam') startCam(); else stopCam();
+        if (id === 'trending') loadTrending();
+        
+        if (id === 'profile' && user) {
+            document.getElementById('profFullName').value = user.fullName;
+            document.getElementById('profUser').value = user.name;
+            document.getElementById('profEmail').value = user.email;
+            document.getElementById('profMobile').value = user.mobile;
+            document.getElementById('profileOtpBox').style.display = 'none';
+            document.getElementById('profileSaveBtn').style.display = 'block';
+        }
+    }
+
+    function checkAuthAndNavigate(id) {
+        if (!user) {
+            notify("Authorization required.", "info");
+            showPage('auth');
+        } else {
+            showPage(id);
+        }
+    }
+
+    function toggleAuthMode(m) {
+        authMode = m;
+        document.getElementById('loginTab').classList.toggle('active', m === 'login');
+        document.getElementById('registerTab').classList.toggle('active', m === 'register');
+        document.getElementById('loginForm').style.display = m === 'login' ? 'block' : 'none';
+        document.getElementById('registerForm').style.display = m === 'register' ? 'block' : 'none';
+    }
+
+    // Registration Flow
+    function handleRegisterRequest() {
+        const fullName = document.getElementById('regFullName').value;
+        const username = document.getElementById('regUser').value;
+        const email = document.getElementById('regEmail').value;
+        const mobile = document.getElementById('regMobile').value;
+        const password = document.getElementById('regPass').value;
+
+        if (!fullName || !username || !mobile || !password) {
+            return notify("Please fill all mandatory fields.", "error");
+        }
+
+        pendingRegData = { fullName, name: username, email, mobile, password };
+        
+        // Open OTP Modal for Registration
+        document.getElementById('otpModalTitle').innerText = "Verify Mobile Registration";
+        document.getElementById('otpModalDesc').innerText = `Sending OTP to ${mobile}. Enter it below to complete registration.`;
+        document.getElementById('otpConfirmBtn').onclick = finalizeRegistration;
+        document.getElementById('otpModal').style.display = 'flex';
+    }
+
+    function finalizeRegistration() {
+        const otp = document.getElementById('modalOtpInput').value;
+        if (otp === "1234") { // Mock OTP
+            // In a real app, this would save to a database
+            localStorage.setItem(`user_${pendingRegData.name}`, JSON.stringify(pendingRegData));
+            notify("Registration successful! You can now login.", "success");
+            closeOtpModal();
+            toggleAuthMode('login');
+        } else {
+            notify("Invalid Registration OTP.", "error");
+        }
+    }
+
+    // Login Flow
+    function handleLogin() {
+        const u = document.getElementById('loginUser').value;
+        const p = document.getElementById('loginPass').value;
+
+        if (u === "demo" && p === "demo123") {
+            user = { name: "demo", fullName: "Demo User", email: "demo@VibeFinder.com", mobile: "+91 0000000000" };
+        } else {
+            const stored = localStorage.getItem(`user_${u}`);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed.password === p) {
+                    user = parsed;
+                } else {
+                    return notify("Incorrect password.", "error");
+                }
+            } else {
+                return notify("User not found. Please Register.", "error");
+            }
+        }
+
+        updateHeaderUI();
+        notify("Welcome back, " + user.fullName, "success");
+        showPage('dashboard');
+    }
+
+    function logout() {
+        user = null;
+        updateHeaderUI();
+        notify("Safe logout complete.", "info");
+        showPage('home');
+    }
+
+    function openForgotPass() {
+        document.getElementById('otpModalTitle').innerText = "Account Recovery";
+        document.getElementById('otpModalDesc').innerText = "Enter mobile to receive recovery OTP.";
+        document.getElementById('otpConfirmBtn').onclick = () => {
+            if (document.getElementById('modalOtpInput').value === "1234") {
+                notify("Identity verified. Check your mobile for password reset link.", "success");
+                closeOtpModal();
+            } else {
+                notify("Invalid OTP.", "error");
+            }
+        };
+        document.getElementById('otpModal').style.display = 'flex';
+    }
+
+    function closeOtpModal() { document.getElementById('otpModal').style.display = 'none'; }
+
+    // Detection Logic
+    async function runDetection() {
+        const btn = document.getElementById('detectBtn');
+        const status = document.getElementById('status');
+        let dataURL = null;
+
+        if (mode === 'cam') {
+            const video = document.getElementById('videoElement');
+            const canvas = document.getElementById('canvas');
+            if(!video.videoWidth) return notify("Camera starting...", "info");
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            dataURL = canvas.toDataURL('image/jpeg');
+        } else {
+            if (!uploadedBase64) return notify("Upload a photo first.", "error");
+            dataURL = uploadedBase64;
+        }
+
+        btn.disabled = true; 
+        // Explicitly stating reliance on the h5 model file
+        status.innerText = "Processing via emotion_model.h5...";
+        
+        try {
+            // Strictly connect to the backend API.
+            // This ensures the response is generated ONLY by the emotion_model.h5 file
+            // and not by any client-side simulation or randomizers.
+            const res = await fetch(`${API}/api/detect/quick`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ frame: dataURL })
+            });
+            
+            if (!res.ok) throw new Error("Backend connection failed");
+
+            const result = await res.json();
+
+            if (result.success) {
+                document.getElementById('moodResult').innerText = result.emotion;
+                fetchGlobalSongs(result.emotion);
+                status.innerText = "Analysis Complete";
+            } else {
+                notify(result.error || "Model could not classify emotion.", "error");
+                status.innerText = "Detection Failed";
+            }
+        } catch (e) { 
+            // Removed the random simulation block.
+            // Now, if the backend is offline, we explicitly error out to honor the
+            // requirement of using the actual model file.
+            console.error(e);
+            notify("Error: Backend with emotion_model.h5 is not reachable.", "error"); 
+            document.getElementById('moodResult').innerText = "---";
+            status.innerText = "System Offline";
+        }
+        finally { btn.disabled = false; }
+    }
+
+    async function fetchGlobalSongs(mood) {
+        // Global search using iTunes
+        const url = `https://itunes.apple.com/search?term=${mood}&limit=12&media=music`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const list = document.getElementById('trackList');
+        list.innerHTML = '';
+        if(data.results.length === 0) list.innerHTML = '<p style="text-align: center; color: #8892b0;">No matching tunes found.</p>';
+        
+        data.results.forEach(t => {
+            const item = document.createElement('div');
+            item.className = 'track-item';
+            item.innerHTML = `
+                <img src="${t.artworkUrl100}">
+                <div class="track-info"><h4>${t.trackName}</h4><p>${t.artistName}</p></div>
+                <button class="play-btn" onclick="play('${t.previewUrl}', this)"><i class="fas fa-play"></i></button>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    // UI Helpers
+    function startCam() {
+        if (stream) return;
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(s => { stream = s; document.getElementById('videoElement').srcObject = s; })
+            .catch(() => notify("Camera blocked.", "error"));
+    }
+
+    function stopCam() { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } }
+
+    function setMode(m) {
+        mode = m;
+        document.getElementById('camBtn').classList.toggle('active', m === 'cam');
+        document.getElementById('uploadBtn').classList.toggle('active', m === 'upload');
+        document.getElementById('camView').style.display = m === 'cam' ? 'block' : 'none';
+        document.getElementById('uploadView').style.display = m === 'upload' ? 'block' : 'none';
+        if (m === 'cam') startCam(); else stopCam();
+    }
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            uploadedBase64 = ev.target.result;
+            document.getElementById('previewImage').src = uploadedBase64;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function updateHeaderUI() {
+        const container = document.getElementById('authSection');
+        if (user) {
+            container.innerHTML = `
+                <div class="user-menu" onclick="document.getElementById('profileDropdown').classList.toggle('show')">
+                    <div style="width: 30px; height: 30px; background: var(--primary); border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: bold; color: white;">${user.name[0].toUpperCase()}</div>
+                    <span>${user.name}</span>
+                    <i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                    <div class="dropdown" id="profileDropdown">
+                        <div class="dropdown-item" onclick="showPage('profile')">My Profile</div>
+                        <div class="dropdown-item" onclick="logout()">Sign Out</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `<button class="nav-btn" onclick="showPage('auth')">Login</button>`;
+        }
+    }
+
+    function requestProfileOtp() {
+        notify("Identity OTP sent to " + document.getElementById('profMobile').value, "success");
+        document.getElementById('profileOtpBox').style.display = 'block';
+        document.getElementById('profileSaveBtn').style.display = 'none';
+    }
+
+    function verifyProfileUpdate() {
+        if (document.getElementById('profOtpInput').value === "1234") {
+            user.fullName = document.getElementById('profFullName').value;
+            user.email = document.getElementById('profEmail').value;
+            user.mobile = document.getElementById('profMobile').value;
+            const newPass = document.getElementById('profPass').value;
+            if (newPass) user.password = newPass;
+            
+            localStorage.setItem(`user_${user.name}`, JSON.stringify(user));
+            notify("Profile synchronized successfully.", "success");
+            showPage('dashboard');
+        } else {
+            notify("Verification failed.", "error");
+        }
+    }
+
+    async function loadTrending() {
+        const grid = document.getElementById('trendingGrid');
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8892b0;">Syncing Global Charts...</p>';
+        try {
+            // Removed 'Hindi' to make it global top hits
+            const res = await fetch(`https://itunes.apple.com/search?term=Top+Hits+2025&limit=24&media=music`);
+            const data = await res.json();
+            grid.innerHTML = '';
+            data.results.forEach(t => {
+                const card = document.createElement('div');
+                card.className = 'track-item';
+                card.innerHTML = `<img src="${t.artworkUrl100}"><div class="track-info"><h4>${t.trackName}</h4><p>${t.artistName}</p></div><button class="play-btn" onclick="play('${t.previewUrl}', this)"><i class="fas fa-play"></i></button>`;
+                grid.appendChild(card);
+            });
+        } catch (e) { grid.innerHTML = '<p style="color: #8892b0;">Offline Chart Access Error.</p>'; }
+    }
+
+    function play(url, btn) {
+        if (currentAudio) {
+            currentAudio.pause();
+            document.querySelectorAll('.play-btn i').forEach(i => i.className = 'fas fa-play');
+            if (currentAudio.src === url) { currentAudio = null; return; }
+        }
+        currentAudio = new Audio(url);
+        currentAudio.play();
+        btn.querySelector('i').className = 'fas fa-pause';
+        currentAudio.onended = () => btn.querySelector('i').className = 'fas fa-play';
+    }
+
+    function notify(msg, type) {
+        const n = document.createElement('div');
+        n.className = 'notification';
+        n.style.background = type === 'success' ? 'rgba(144, 238, 144, 0.3)' : type === 'error' ? 'rgba(255, 99, 71, 0.3)' : 'rgba(255, 218, 185, 0.3)';
+        n.style.border = `1px solid ${type === 'success' ? '#90EE90' : type === 'error' ? '#FF6347' : '#FFDAB9'}`;
+        n.innerText = msg;
+        document.body.appendChild(n);
+        setTimeout(() => n.remove(), 4000);
+    }
+
+    function scrollToLearnMore() { document.getElementById('learnMore').scrollIntoView({ behavior: 'smooth' }); }
+</script>
+
+</body>
+</html>
